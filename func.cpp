@@ -76,7 +76,7 @@ int NumStrings(char * Text, int len)
 
 char** AllocateMem(size_t len)
 {
-    return (char* *) calloc(len + 2, sizeof(char *));
+    return (char* *) calloc(len, sizeof(char *));
 }
 
 int IsEnd(int a)
@@ -99,12 +99,12 @@ int Comp (const void * str1_ptr, const void * str2_ptr)
 
     int i = 0, j = 0;
 
-    printf("%p - %p\n", str1_ptr, str2_ptr);
+    //printf("%p - %p\n", str1_ptr, str2_ptr);
 
-    const char * str1 = (const char *) str1_ptr;
-    const char * str2 = (const char *) str2_ptr;
+    const char * str1 = *(const char **) str1_ptr;
+    const char * str2 = *(const char **) str2_ptr;
 
-    printf("%p - %p\n", str1, str2);
+    //printf("%p - %p\n", str1, str2);
     //printf("%c - %c", *(str1 + i), *(str2 + j));
 
     while(!isalpha(*(str1 + i)) && !IsEnd(*(str1 + i))) i++;
@@ -121,6 +121,8 @@ int Comp (const void * str1_ptr, const void * str2_ptr)
         while(!isalpha(*(str1 + i)) && !IsEnd(*(str1 + i))) i++;
         while(!isalpha(*(str2 + j)) && !IsEnd(*(str2 + j))) j++;
     }
+
+    //printf("%c - %c", *(str1 + i), *(str2 + j));
 
     return tolower(*(str1 + i)) - tolower(*(str2 + j));
 }
