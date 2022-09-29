@@ -1,30 +1,97 @@
 #include "header.h"
 
-char * GetMem(size_t len)
+void CheckPtr(FILE * ptr)
 {
-    return (char *)calloc(len + 1, sizeof(char));
+    if (ptr == NULL)
+        printf("Can not open file\n");
 }
 
-void GetIndexes(char * Index[], char * Text)
+void TextCtor(struct Text * book, FILE * stream)
 {
-    int flag = 1, i = 1;
-    Index[0] = Text;
+    assert(book   != NULL);
+    assert(stream != NULL);
 
-    //printf("%p\n", Text);
+    fseek(stream, 0L, SEEK_END);
+    book->numOfLetters = (size_t) ftell(stream);
+    rewind(stream);
+
+    book->bufferPtr = GetMem(book->numOfLetters + 1);
+    CheckPtrAss(book->bufferPtr);
+    GetText(stream, book);
+    fclose(stream);
+
+    book->numOfStrings = NumStrings(book->bufferPtr, book->numOfLetters + 1);
+
+    book->strings = AllocMem(book->numOfStrings);
+    CheckPtrAss(book->strings);
+    GetIndexes(book->strings, book->bufferPtr);
+}
+
+char * GetMem(size_t length)
+{
+    return (char *)calloc(length, sizeof(char));
+}
+
+void CheckPtrAss(void * ptr)
+{
+    assert(ptr != NULL);
+}
+
+void GetText(FILE * stream, struct Text * book)
+{
+    assert(stream != NULL);
+    assert(book   != NULL);
+
+    fread(book->bufferPtr, sizeof(char), book->numOfLetters, stream);
+    book->bufferPtr[book->numOfLetters] = '\0';
+}
+
+size_t NumStrings(char * stream, size_t len)
+{
+    assert(stream != NULL);
+    size_t num = 0;
+
+    for (size_t i = 0; i < len; i++)
+    {
+        if (*(stream + i) == '\n' || *(stream + i) == '\r')
+        {
+            num++;
+        }
+
+        if (*(stream + i) == '\0')
+            return num + 1;
+    }
+
+    return 0;
+}
+
+char* * AllocMem(size_t len)
+{
+    return (char**)calloc(len, sizeof(char*));
+}
+
+void GetIndexes(char * Index[], char * text)
+{
+    assert(Index != NULL);
+    assert(text  != NULL);
+
+    int flag = 1, i = 1;
+    Index[0] = text;
 
     while (flag)
     {
         Index[i] = GetPtr(Index[i - 1], &flag);
         i++;
     }
-    //printf("Loop completed\n");
 }
 
 char * GetPtr(char * ptr, int * flag)
 {
+    assert(ptr != NULL);
+
     int i = 0, ch = *(ptr + i);
 
-    while(ch != '\r' && ch != '\n' && ch != '\0')
+    while(!IsEnd(ch))
     {
         i++;
         ch = *(ptr + i);
@@ -36,12 +103,33 @@ char * GetPtr(char * ptr, int * flag)
         return (ptr + i);
     }
 
-    //printf("%p - %p\n", ptr, (ptr + i + 2));
-
     return (ptr + (i + 1));
 }
 
-void my_puts(char * ptr)
+int IsEnd(int a)
+{
+    if (a == '\r' || a == '\n' || a == '\0')
+        return 1;
+    return 0;
+}
+
+void paste_into_file(FILE * stream, char * strings[], size_t numOfStrings)
+{
+    assert(strings != NULL);
+    assert(stream  != NULL);
+
+    for (size_t i = 0; i < numOfStrings - 1; i++)
+    {
+        if (!IfBlank(strings[i]))
+            continue;
+        else
+        {
+            MyFputs(strings[i], stream);
+        }
+    }
+}
+
+int IfBlank(char * ptr)
 {
     assert(ptr != NULL);
 
@@ -49,72 +137,63 @@ void my_puts(char * ptr)
 
     while (ch != '\r' && ch != '\n' && ch != '\0')
     {
-        putchar(ch);
+        if (!isblank(*(ptr + i)))
+            return 1;
         i++;
         ch = *(ptr + i);
     }
-    printf("\n");
-}
 
-
-int NumStrings(char * Text, int len)
-{
-    int num = 0;
-
-    for (int i = 0; i < len + 1; i++)
-    {
-        if (*(Text + i) == '\n' || *(Text + i) == '\r')
-        {
-            num++;
-        }
-
-        if (*(Text + i) == '\0')
-            return num + 1;
-    }
     return 0;
 }
 
-char** AllocateMem(size_t len)
+void MyFputs(char * ptr, FILE * stream)
 {
-    return (char* *) calloc(len, sizeof(char *));
-}
+    assert(ptr    != NULL);
+    assert(stream != NULL);
 
-int IsEnd(int a)
-{
-    char arr[3] = {'\n', '\r', '\0'};
-    for (int i = 0; i < 3; i++)
+    int i = 0, ch = *(ptr + i);
+
+    while (ch != '\r' && ch != '\n' && ch != '\0')
     {
-        if (arr[i] == a)
-            return 1;
+        fputc(ch, stream);
+        i++;
+        ch = *(ptr + i);
     }
-    return 0;
+
+    fputc('\n', stream);
 }
 
-//-------------------------------------------------------------------------------------------------
+void TextDtor(struct Text * book)
+{
+    assert(book != NULL);
 
-int Comp (const void * str1_ptr, const void * str2_ptr)
+    free(book->bufferPtr);
+    free(book->strings);
+
+    book->bufferPtr = NULL;
+    book->strings   = NULL;
+    book->numOfLetters = 0;
+    book->numOfStrings = 0;
+}
+
+//                                     COMPARATOR ZONE
+//------------------------------------------------------------------------------------------
+
+int CompBeg(const void * str1_ptr, const void * str2_ptr)
 {
     assert(str1_ptr != NULL);
     assert(str2_ptr != NULL);
 
     int i = 0, j = 0;
 
-    //printf("%p - %p\n", str1_ptr, str2_ptr);
-
     const char * str1 = *(const char **) str1_ptr;
     const char * str2 = *(const char **) str2_ptr;
-
-    //printf("%p - %p\n", str1, str2);
-    //printf("%c - %c", *(str1 + i), *(str2 + j));
 
     while(!isalpha(*(str1 + i)) && !IsEnd(*(str1 + i))) i++;
     while(!isalpha(*(str2 + j)) && !IsEnd(*(str2 + j))) j++;
 
-    //printf("%c - %c", *(str1 + i), *(str2 + j));
-
     while (tolower(*(str1 + i)) == tolower(*(str2 + j)) && !IsEnd(*(str1 + i)) && !IsEnd(*(str2 + j)))
     {
-        //printf("%c - %c", *(str1 + i), *(str2 + j));
         i++;
         j++;
 
@@ -122,7 +201,38 @@ int Comp (const void * str1_ptr, const void * str2_ptr)
         while(!isalpha(*(str2 + j)) && !IsEnd(*(str2 + j))) j++;
     }
 
-    //printf("%c - %c", *(str1 + i), *(str2 + j));
+    return tolower(*(str1 + i)) - tolower(*(str2 + j));
+}
+
+int CompEnd(const void * str1_ptr, const void * str2_ptr)
+{
+    assert(str1_ptr != NULL);
+    assert(str2_ptr != NULL);
+
+    const char * str1 = *(const char **) str1_ptr;
+    const char * str2 = *(const char **) str2_ptr;
+
+    int i = 0, j = 0;
+
+    while(!IsEnd(*(str1 + i))) i++;
+    if (i != 0)
+        i--;
+
+    while(!IsEnd(*(str2 + j))) j++;
+    if (j != 0)
+        j--;
+
+    while(!isalpha(*(str1 + i)) && !IsEnd(*(str1 + i))) i--;
+    while(!isalpha(*(str2 + j)) && !IsEnd(*(str2 + j))) j--;
+
+    while (tolower(*(str1 + i)) == tolower(*(str2 + j)) && !IsEnd(*(str1 + i)) && !IsEnd(*(str2 + j)))
+    {
+        i--;
+        j--;
+
+        while(!isalpha(*(str1 + i)) && !IsEnd(*(str1 + i))) i--;
+        while(!isalpha(*(str2 + j)) && !IsEnd(*(str2 + j))) j--;
+    }
 
     return tolower(*(str1 + i)) - tolower(*(str2 + j));
 }

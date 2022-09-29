@@ -3,45 +3,34 @@
 int main(void)
 {
     FILE *fp = fopen("hamlet.txt", "r");
+    CheckPtr(fp);
 
-    if (fp == NULL)
-    {
-        printf("Can not open file\n");
-        return 0;
-    }
+    struct Text my_text;
+    TextCtor(&my_text, fp);
 
-    struct stat buff;
+    qsort(my_text.strings, my_text.numOfStrings, sizeof(my_text.strings[0]), CompBeg);
+    fp = fopen("AllTypesOfSort.txt", "w");
+    CheckPtr(fp);
 
-    stat("hamlet.txt", &buff);
-    size_t num_of_letters = buff.st_size;
+    fputs("         Alphabet sorted text \n\n", fp);
 
-    char * Text = GetMem(num_of_letters);
-    fread(Text, sizeof(char), num_of_letters, fp);
+    paste_into_file(fp, my_text.strings, my_text.numOfStrings);
+
+    qsort(my_text.strings, my_text.numOfStrings, sizeof(my_text.strings[0]), CompEnd);
+
+    fputs("\n\n-----------------------------------------------------------------------\n\n", fp);
+    fputs("         End line alphabet sorted text \n\n", fp);
+
+    paste_into_file(fp, my_text.strings, my_text.numOfStrings);
+
+    fputs("\n\n-----------------------------------------------------------------------\n\n", fp);
+    fputs("         Original text \n\n", fp);
+
+    fputs(my_text.bufferPtr, fp);
+
     fclose(fp);
 
-    Text[num_of_letters] = '\0';
-
-    int num_of_strings = NumStrings(Text, num_of_letters);
-
-    char* * index_ptr = AllocateMem(num_of_strings);
-    GetIndexes(index_ptr, Text);
-
-    //printf("%p - %p\n", index_ptr[0], Text);
-    //my_puts(index_ptr[91]);
-    //my_puts(index_ptr[96]);
-    //my_puts(index_ptr[4458]); // почему у меня считает неправильно количество строк((( а эта помойка все-равно работает(((
-
-    //printf("%p - %p\n", index_ptr[4], index_ptr[5]);
-    //printf("%d\n", Comp(index_ptr[1], index_ptr[2]));
-    //printf("%d\n", 't' - 'w');
-    //getchar();
-
-    qsort(index_ptr, num_of_strings, sizeof(index_ptr[0]), Comp);
-
-    for (int i = 0; i < num_of_strings; i++)
-    {
-        my_puts(index_ptr[i]);
-    }
+    TextDtor(&my_text);
 
     return 0;
 }
